@@ -1,0 +1,7 @@
+interface:
+  display_name: "Figma Page Sync"
+  short_description: "Write any website back to Figma accurately"
+  default_prompt: "Use $figma-page-sync to write the current website back to Figma; reuse the component library or create 01 Base, 02 Semantic, 03 Spacing, and 04 Typography tokens first."
+
+policy:
+  allow_implicit_invocation: true

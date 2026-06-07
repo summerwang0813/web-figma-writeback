@@ -1,0 +1,34 @@
+{
+  "name": "web-figma-writeback",
+  "version": "0.1.0",
+  "description": "Reusable Codex plugin for writing any implemented website back to Figma with design-system fidelity.",
+  "author": {
+    "name": "summerwang0813"
+  },
+  "repository": "https://github.com/summerwang0813/web-figma-writeback",
+  "keywords": [
+    "figma",
+    "web",
+    "writeback",
+    "design-system",
+    "codex-skill"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Web Figma Writeback",
+    "shortDescription": "Write real webpages back to Figma accurately.",
+    "longDescription": "Capture a running website as the source of truth, then rebuild or update the matching Figma page while reusing component libraries, variables, typography styles, colors, icons, images, and layout measurements. If no design system exists, create 01 Base, 02 Semantic, 03 Spacing, and 04 Typography foundations first.",
+    "developerName": "summerwang0813",
+    "category": "Productivity",
+    "capabilities": [
+      "Design",
+      "Automation",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $figma-page-sync to write this website back to Figma.",
+      "Sync the current route to Figma and reuse the component library.",
+      "Create Figma variables first, then write the captured webpage."
+    ]
+  }
+}
