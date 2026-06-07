@@ -22,6 +22,27 @@ If the user explicitly says "同步到网页" or "同步到代码", inspect Figm
 - If the target file has no usable component library or variables, create a fallback design-system foundation before writing the page.
 - If a needed color, text style, spacing token, or component variant is missing, create or extend the design system first, then bind page nodes to it.
 
+## Editable Writeback Contract
+
+The Figma output must be an editable design, not a screenshot archive.
+
+- Final page/state frames must be built from semantic Figma nodes: frames, auto-layout groups, text nodes, component instances, vectors/SVG icons, and image fills only where the webpage itself uses an image.
+- Do not use a full-page screenshot, single image rectangle, or screenshot component instance as the primary page body.
+- Screenshots are allowed only as locked reference layers, comparison artifacts, or temporary assets during verification. Name them `Reference Screenshot` and keep them separate from the editable module tree.
+- Product photos, hero photos, backgrounds, thumbnails, and other real webpage images may use image fills. UI chrome, text, buttons, forms, cards, navigation, tables, and order states must be editable nodes or component instances.
+- If a component cannot be reproduced editably with current information, stop and report the blocker instead of falling back to a full-page screenshot.
+
+Before writing any page modules, run the design-system preflight script from `scripts/figma-design-system-preflight.js` through `use_figma` and use its output to create a writeback plan:
+
+1. Existing variables/styles/components that will be reused.
+2. Missing tokens/components that must be created in the fallback foundation.
+3. Component-role mapping for navigation, buttons, inputs, selectors, cards, tabs, badges, modals, tables, icons, and ecommerce/order controls.
+4. Asset map for real webpage images only.
+
+Components named `web-figma-writeback/assets/...`, `Reference Screenshot`, or similar screenshot/reference names are asset/reference components, not reusable UI components. Do not count them as the component library.
+
+After writing modules, run `scripts/figma-editable-output-audit.js`. A sync is not complete if the audit reports large screenshot/image nodes standing in for whole pages or modules.
+
 ## Fallback Design System
 
 When the Figma file does not already have a usable component library, create variables and text styles in this order:
@@ -33,12 +54,18 @@ When the Figma file does not already have a usable component library, create var
 
 Typography must be reusable, not hardcoded per text layer. Create Figma text styles such as `04 Typography/Display/H1`, `04 Typography/Title/H2`, `04 Typography/Body/Regular`, `04 Typography/Button/Primary`, and apply those styles to text nodes. Where the Figma API supports variable binding for typography values, also create numeric/string variables for font family, font size, line height, font weight, and letter spacing; otherwise the text styles are the callable typography surface.
 
+When the target Figma file already has text styles, use those first. A final text node is not complete until `textStyleId` points to an existing local or library Text Style. Copying `fontName`, `fontSize`, `fontWeight`, or `lineHeight` from CSS is only an intermediate matching step; it is not enough for final writeback.
+
+If the webpage uses an exact typography value that does not exist in the target file, create a new Text Style with a trailing `*` in the style name, such as `Web / Coupon / Title*`. The `*` marks styles added by this sync and keeps them visually distinct from the original component-library styles.
+
 ## Website To Figma
 
 1. Capture the running route before writing anything.
    - Save a viewport screenshot.
    - Capture DOM section bounds, text bounds, image bounds, CSS variables, fixed/sticky elements, and scroll height.
    - Use `scripts/browser-page-capture.js` as the browser-side capture snippet when useful.
+   - Prefer H2D-style fidelity checks: use captured `visibleRect`, `clippingAncestors`, `zIndex`, `overflow`, `objectFit`, and `objectPosition` when placing images, clipped media, sticky bars, dropdowns, and overlays. Do not place images from raw bounding boxes when the source is clipped by a parent.
+   - Treat screenshots as verification references only, not as final editable output.
 
 2. Split the page into semantic modules.
    - Top-level Figma frames should match webpage modules such as `Header`, `Hero`, `Product Gallery`, `Checkout Summary`, `Payment Detail`, `Order List`.
@@ -46,10 +73,12 @@ Typography must be reusable, not hardcoded per text layer. Create Figma text sty
 
 3. Prepare component-library references, tokens, and assets.
    - Search Figma libraries first.
+   - Run `scripts/figma-design-system-preflight.js` and summarize the existing components, variables, styles, and gaps.
    - Import matching component instances from the component library when available.
    - If no component library exists, create the fallback `01 Base / 02 Semantic / 03 Spacing / 04 Typography` system first.
    - Bind fills, strokes, and text colors to existing variables.
    - Bind typography to text styles; do not leave repeated font settings as one-off layer properties.
+   - Resolve each captured text block to a semantic Text Style before writing: brand mark, H1/H2, section title, card title, body, caption, label, badge/status, link, price, gallery arrow, and button label.
    - Create missing variables in the correct fallback layer only when the library lacks the required value.
    - Upload webpage images to Figma and map each `src` to an `imageHash`.
 
@@ -90,13 +119,19 @@ Typography must be reusable, not hardcoded per text layer. Create Figma text sty
 
 - Never redraw from memory. Always capture or inspect the current source of truth first.
 - Do not build page-specific one-off colors, fonts, or controls when the Figma component library has a matching asset.
+- Do not use a screenshot or image component as the final editable page/module. Full-page screenshots belong only in reference layers or verification artifacts.
 - Do not write a page into a file with no design-system foundation; create `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography` first.
 - Do not hardcode typography on repeated text nodes; create callable text styles and apply them.
+- Do not leave final `TEXT` nodes without `textStyleId`. If the component library has a matching Text Style, bind it; if not, create the missing `04 Typography/...` style and bind it before completion.
+- Do not create unmarked new typography. Any newly created Text Style must end with `*`; existing component-library Text Styles keep their original names.
 - Do not treat the current website's product/project name as the skill name; this skill applies to any generated website.
 - Do not add states the source does not have, such as making static detail rows look selected.
 - Do not add shadows to same-level cards if the source uses flat layers; keep shadows for floating/sticky layers only.
 - Do not use placeholder images when real page assets are available.
 - Do not hand-draw icons when the webpage SVG or design-system icon exists.
+- Do not let controls inherit browser-default appearance in Figma. Selects, dropdowns, inputs, and buttons must be rebuilt from captured custom control geometry and design-system tokens.
+- Button labels must use the captured computed text color from the real button/control. Primary or dark buttons with green/dark fills usually have white labels; never let those labels fall back to the body text color.
+- Login, registration, empty, modal, dropdown, and other flow states must be captured from the real route/state. Do not replace a real page state with a simplified flow placeholder or an empty illustrative area.
 - Keep button radius, padding, text alignment, and vertical breathing room exact; button text must not touch edges.
 - Use white or grey backgrounds according to the source. Do not switch a page to a dark theme unless the source is dark.
 

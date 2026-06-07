@@ -8,11 +8,12 @@ This reference expands the `figma-page-sync` skill for writing generated or impl
 2. Keep Figma nodes semantically aligned with webpage modules.
 3. Search and reuse the Figma file's component library, styles, and variables before creating local nodes from scratch.
 4. If the file has no usable component library, create a fallback foundation before writing the page: `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography`.
-5. Bind colors, spacing, and text to Figma variables/styles; create missing variables before applying them.
+5. Bind colors, spacing, and text to Figma variables/styles; create missing variables/styles before applying them.
 6. Use real images, real object-fit behavior, and real coordinates.
 7. Write and verify in sections, not as one huge unverified operation.
 8. Avoid invented states, decorative effects, and layout shortcuts.
 9. Keep the workflow website-agnostic; do not bake a specific product or project name into the skill.
+10. Final Figma output must be editable. Screenshots are references only, never the primary page/module body.
 
 ## Generated Website To Figma Checklist
 
@@ -45,8 +46,17 @@ Recommended file names:
 ## Component Library And Token Procedure
 
 1. Search existing components, component sets, styles, and variables in the target Figma file and subscribed libraries.
+   - Run `scripts/figma-design-system-preflight.js` through `use_figma` before writing.
+   - Summarize reusable components by role: navigation, button, input, select, card, tabs, badge, modal, table, icon, ecommerce/order controls.
+   - Ignore `web-figma-writeback/assets/...`, `Reference Screenshot`, and other screenshot/reference components when deciding whether a component library exists.
+   - Summarize existing variable collections and text/paint styles.
+   - Decide which values can be reused and which fallback tokens must be created.
 2. Import matching components for buttons, inputs, selectors, tabs, badges, order cards, navigation, icons, and common ecommerce controls.
 3. Use library text styles and color variables when available.
+   - Every final text node must have a `textStyleId`.
+   - Match text semantically first: brand/logo, display title, section title, inline/card title, body, caption, field label, badge/status, link, price, gallery arrow, and button label.
+   - If no existing Text Style matches, create the missing `04 Typography/...` or semantic `Web / ...` style with a trailing `*`, then bind the text node to that style.
+   - Existing component-library Text Styles keep their original names; only newly created Text Styles get the `*` marker.
 4. If no suitable library exists, create the fallback foundation below before drawing page modules.
 5. Set correct scopes:
    - Text colors: `TEXT_FILL`
@@ -55,6 +65,20 @@ Recommended file names:
    - Spacing and size numbers: `GAP`, `WIDTH_HEIGHT`, `CORNER_RADIUS` when supported by the current Figma API.
 
 Use `STROKE_COLOR`, not the older `STROKE` scope.
+
+## Editable Output Gate
+
+The plugin must rebuild UI as editable Figma structure:
+
+- Text from the webpage becomes Figma text nodes using reusable text styles. Raw CSS font values are allowed only for matching and style creation; final output must reference Text Styles.
+- Buttons, selectors, inputs, tabs, cards, badges, modals, order rows, and navigation use library components when available; otherwise create editable fallback components before using them.
+- Icons use the library icon component or the webpage SVG/vector source.
+- Real webpage images use image fills with uploaded `imageHash` values.
+- Full-page screenshots may be placed only as locked/reference layers named `Reference Screenshot`, or kept in local verification artifacts.
+
+Never satisfy a page/state request by placing a full-page screenshot, large image rectangle, or screenshot component instance as the visible page body. If the agent cannot reconstruct a module editably, it must stop and report the missing component/data instead of using a screenshot fallback.
+
+After writing, run `scripts/figma-editable-output-audit.js`. Any violation blocks completion until the module is rebuilt as editable nodes.
 
 ## Fallback Foundation
 
@@ -194,19 +218,20 @@ If the API cannot bind a typography variable directly, keep the variable as a de
 3. Use image fills with the correct scale mode.
 4. Remove temporary upload placement nodes when they are no longer needed.
 5. Verify thumbnails, main images, clipped containers, and active strokes separately.
+6. Do not upload full-page screenshots into the editable module tree. Keep them as reference-only artifacts.
 
 ## Writeback Procedure
 
 Write in this order unless the page structure requires otherwise:
 
-1. Component-library search, fallback foundation if needed, variables, text styles, and frame shell.
+1. Figma design-system preflight, component-role map, fallback foundation if needed, variables, text styles, and frame shell.
 2. Header or navigation.
 3. Primary hero or page title area.
 4. Main product/gallery/detail modules.
 5. Forms, selectors, order details, and stateful cards.
 6. Sticky/floating bars.
 7. Long comparison tables, order lists, and lower sections.
-8. Final screenshot and node-coordinate verification.
+8. Editable-output audit, final screenshot, and node-coordinate verification.
 
 After each module, return a compact result:
 
@@ -259,6 +284,7 @@ Before calling a sync complete, verify:
 - Figma component instances, variables, and text styles are used when available.
 - Missing design-system values were added to `01 Base`, `02 Semantic`, `03 Spacing`, or `04 Typography` before use.
 - Repeated typography uses callable text styles, not duplicated one-off layer values.
+- No large screenshot/image component is being used as the final page/module body.
 - No accidental selected, hover, disabled, or active states were added.
 - Sticky/floating layers keep appropriate elevation; same-level content stays flat when source is flat.
 

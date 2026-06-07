@@ -10,6 +10,33 @@
 4. 图片区域必须使用真实图片资产和真实坐标，不能用占位图或随意裁切。
 5. 每写一段就截图校验，不能等整页写完才发现错位。
 6. 不要给页面加源码里没有的状态，例如误把参数明细做成选中态。
+7. 最终写入必须是可编辑 Figma 节点，不能用整页截图、截图组件或大图层冒充页面。
+
+## 可编辑写入门禁
+
+这个插件不是“网页截图导入器”。截图只能用于对照和校验，不能作为最终页面主体。
+
+最终 Figma 页面必须满足：
+
+- 网页文字对应 Figma 文本节点，并引用文字样式。
+- 按钮、输入框、下拉选择、卡片、导航、弹窗、订单状态等优先引用组件库组件。
+- 组件库没有时，先建立 fallback 组件/变量，再写页面。
+- 真实产品图、场景图、头像等网页图片可以使用 image fill。
+- Header、表单、按钮、订单明细、参数表、卡片、导航等 UI 不能用截图代替。
+
+写入前必须先运行：
+
+- `skills/figma-page-sync/scripts/figma-design-system-preflight.js`
+
+它会检查目标 Figma 文件里已有的 components、component sets、variables、text styles、paint styles，并输出哪些可以复用、哪些缺失。
+
+注意：`web-figma-writeback/assets/...`、`Reference Screenshot`、截图组件、整页图片组件都只能算资产或参考，不能算组件库组件。
+
+写入后必须运行：
+
+- `skills/figma-page-sync/scripts/figma-editable-output-audit.js`
+
+如果审计发现大尺寸截图节点、截图组件实例或页面文本节点过少，就不能算完成，必须重写为可编辑结构。
 
 ## 标准流程
 
@@ -97,6 +124,7 @@ Figma Plugin API 不能直接从网页 URL 读取图片。推荐流程：
 2. 记录每张图的 `imageHash`。
 3. 写入页面时用 image fill 绑定对应 `imageHash`。
 4. 上传过程产生的临时放置节点要清理。
+5. 整页截图只能作为 Reference Screenshot 或本地校验图，不允许进入最终页面结构。
 
 图片展示区尤其要严谨：
 
@@ -112,14 +140,14 @@ Figma Plugin API 不能直接从网页 URL 读取图片。推荐流程：
 
 推荐分段写入，不要一次性写整页：
 
-1. 变量和画板
+1. Figma 预检、组件映射、变量和画板
 2. Header
 3. Hero 或详情首屏
 4. 图片区
 5. 配置信息区
 6. sticky/fixed 底部栏
 7. 参数/列表/购买方案等长内容
-8. 最后截图和结构校验
+8. 可编辑结构审计、最后截图和结构校验
 
 每次写入必须返回：
 
@@ -336,9 +364,12 @@ Figma Plugin API 不能直接从网页 URL 读取图片。推荐流程：
 
 - [ ] 当前网页截图已更新
 - [ ] `figma-layout-capture.json` 已更新
+- [ ] 已运行 Figma design-system preflight
+- [ ] 已列出可复用 components、variables、text styles
 - [ ] 图片资产已上传并拿到 imageHash
 - [ ] Figma 目标页面确认无误
 - [ ] 颜色变量已存在或已创建
+- [ ] 缺失组件/变量已在 fallback foundation 中创建
 - [ ] 写入脚本按模块拆分
 
 每次写回页面后检查：
@@ -351,6 +382,7 @@ Figma Plugin API 不能直接从网页 URL 读取图片。推荐流程：
 - [ ] 没有多余选中态
 - [ ] 图标使用网页 SVG 或组件库图标
 - [ ] Figma 截图和网页截图对比通过
+- [ ] 已运行 editable-output audit，确认没有整页截图/大图组件冒充可编辑页面
 
 ## 本项目已验证的关键数据
 

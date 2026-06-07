@@ -7,7 +7,7 @@ This plugin is website-agnostic. It can be used with any generated or implemente
 ## What It Does
 
 - Captures real webpage layout, text, images, CSS variables, and section bounds.
-- Writes matching Figma frames using semantic modules.
+- Rebuilds matching Figma frames using editable semantic modules.
 - Reuses the target Figma file's component library, variables, styles, and icons.
 - Creates fallback foundations when needed:
   - `01 Base`
@@ -15,7 +15,16 @@ This plugin is website-agnostic. It can be used with any generated or implemente
   - `03 Spacing`
   - `04 Typography`
 - Applies reusable typography styles instead of one-off text styling.
+- Uses screenshots only as references for verification, not as the final editable page.
 - Verifies Figma output against the captured webpage layout and screenshots.
+
+## Important: Editable Output Only
+
+This plugin is not a screenshot-to-Figma exporter. A full-page screenshot, image rectangle, or screenshot component instance must not be used as the final page body.
+
+The final Figma output should be editable: text nodes for text, component instances for controls, frames/auto-layout for modules, vectors/SVGs for icons, and image fills only for real webpage images such as product photos or hero media.
+
+Before writing, run the design-system preflight so the target file's existing components, variables, and typography styles are reused. If the target file has no usable design system, create the fallback foundations first.
 
 ## Structure
 
@@ -32,6 +41,8 @@ web-figma-writeback/
         ├── references/page-sync-workflow.md
         └── scripts/
             ├── browser-page-capture.js
+            ├── figma-design-system-preflight.js
+            ├── figma-editable-output-audit.js
             └── compare-layouts.mjs
 ```
 
@@ -70,9 +81,11 @@ Use the real webpage layout as the source of truth. Reuse the component library 
 
 4. Expected workflow.
    - Capture the actual webpage DOM, CSS variables, images, text, and layout bounds.
+   - Run `figma-design-system-preflight.js` in the target Figma file.
    - Search the target Figma file for components, variables, styles, and libraries.
    - Create missing variables and typography styles only when needed.
-   - Write the page into Figma module by module.
+   - Write the page into Figma module by module as editable nodes.
+   - Run `figma-editable-output-audit.js` to block screenshot-only output.
    - Verify Figma coordinates and screenshots against the webpage.
 
 5. Re-sync after code changes.
