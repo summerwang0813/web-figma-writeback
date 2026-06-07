@@ -48,6 +48,39 @@ cp -R skills/figma-page-sync ~/.codex/skills/
 
 For plugin usage, install or share the whole `web-figma-writeback/` folder in Codex.
 
+## How To Use
+
+1. Open or run the website you want to sync.
+   - Local examples: `http://127.0.0.1:4173/#/checkout`, `http://localhost:3000/`
+   - The page in the browser is the source of truth.
+
+2. Prepare the target Figma file.
+   - Use an existing Figma design file URL.
+   - If possible, provide a node-specific URL for the target page or frame.
+   - Make sure Codex has permission to write to the Figma file.
+
+3. Ask Codex to use the skill.
+
+```text
+Use $figma-page-sync to write the current webpage into this Figma file:
+https://www.figma.com/design/FILE_KEY/FILE_NAME?node-id=NODE-ID
+
+Use the real webpage layout as the source of truth. Reuse the component library and variables. If the file has no usable library, create 01 Base, 02 Semantic, 03 Spacing, and 04 Typography first.
+```
+
+4. Expected workflow.
+   - Capture the actual webpage DOM, CSS variables, images, text, and layout bounds.
+   - Search the target Figma file for components, variables, styles, and libraries.
+   - Create missing variables and typography styles only when needed.
+   - Write the page into Figma module by module.
+   - Verify Figma coordinates and screenshots against the webpage.
+
+5. Re-sync after code changes.
+
+```text
+Use $figma-page-sync to sync the current webpage back to Figma again. Keep the existing design-system variables and update only changed modules.
+```
+
 ## Example Prompt
 
 ```text
