@@ -12,8 +12,14 @@ const CONFIG = {
   requireTextFillVariableBinding: true,
   requireSolidPaintVariableBinding: true,
   requireSelectValueTruncation: true,
+  requireNoSyntheticOptionalStatus: true,
+  requireTimelineProgressNotButtons: true,
   maxSelectValueTextHeight: 24,
   selectValueNamePattern: /select value|dropdown value|picker value|选择器值|下拉值/i,
+  syntheticOptionalStatusPattern: /^可选$/,
+  statusNodeNamePattern: /status|badge|pill|tag|payment|method|状态|标签|徽标|支付/i,
+  progressStepTextPattern: /^(待付款|待发货|待收货|已签收|已完成|售后处理中|已取消)$/,
+  progressNodeNamePattern: /progress|timeline|step|order status|order-step|订单进度|进度|步骤|履约/i,
   screenshotNamePattern: /screenshot|full.?page|reference|截图|整页|页面截图/i,
   assetPageNamePattern: /asset|component|library|组件|素材|page 1/i
 };
@@ -56,6 +62,49 @@ function isSelectValueText(node) {
   return node.type === "TEXT" && CONFIG.selectValueNamePattern.test(node.name || "");
 }
 
+function nodeNamePath(node, limit = 4) {
+  const names = [];
+  let current = node;
+  while (current && names.length < limit) {
+    names.push(current.name || "");
+    current = current.parent;
+  }
+  return names.join(" / ");
+}
+
+function hasVisibleSolidFill(node) {
+  return Array.isArray(node.fills) &&
+    node.fills.some((paint) => paint.visible !== false && paint.type === "SOLID" && paint.opacity !== 0);
+}
+
+function isSyntheticOptionalStatusText(node) {
+  if (node.type !== "TEXT") return false;
+  if (!CONFIG.syntheticOptionalStatusPattern.test((node.characters || "").trim())) return false;
+  return CONFIG.statusNodeNamePattern.test(nodeNamePath(node));
+}
+
+function isButtonLikeProgressText(node) {
+  if (node.type !== "TEXT") return false;
+  if (!CONFIG.progressStepTextPattern.test((node.characters || "").trim())) return false;
+  if (!CONFIG.progressNodeNamePattern.test(nodeNamePath(node, 5))) return false;
+  let current = node.parent;
+  let depth = 0;
+  while (current && current.type !== "PAGE" && depth < 3) {
+    if (
+      hasVisibleSolidFill(current) &&
+      current.width >= 48 &&
+      current.width <= 360 &&
+      current.height >= 30 &&
+      current.height <= 72
+    ) {
+      return true;
+    }
+    current = current.parent;
+    depth += 1;
+  }
+  return false;
+}
+
 function hasSingleLineTruncation(node) {
   return node.textAutoResize === "TRUNCATE" ||
     node.textTruncation === "ENDING" ||
@@ -88,7 +137,9 @@ function countEditableNodes(root) {
     textWithoutFillVariable: 0,
     nodesWithoutFillVariable: 0,
     nodesWithoutStrokeVariable: 0,
-    selectValueTextWithoutTruncation: 0
+    selectValueTextWithoutTruncation: 0,
+    syntheticOptionalStatusTexts: 0,
+    buttonLikeProgressTexts: 0
   };
 
   walk(root, (node) => {
@@ -108,6 +159,12 @@ function countEditableNodes(root) {
         (!hasSingleLineTruncation(node) || node.height > CONFIG.maxSelectValueTextHeight)
       ) {
         counts.selectValueTextWithoutTruncation += 1;
+      }
+      if (CONFIG.requireNoSyntheticOptionalStatus && isSyntheticOptionalStatusText(node)) {
+        counts.syntheticOptionalStatusTexts += 1;
+      }
+      if (CONFIG.requireTimelineProgressNotButtons && isButtonLikeProgressText(node)) {
+        counts.buttonLikeProgressTexts += 1;
       }
     }
     if (
@@ -152,6 +209,8 @@ function auditPage(page) {
   const nodesWithoutFillVariable = [];
   const nodesWithoutStrokeVariable = [];
   const selectValueTextWithoutTruncationNodes = [];
+  const syntheticOptionalStatusTextNodes = [];
+  const buttonLikeProgressTextNodes = [];
 
   walk(page, (node) => {
     if (CONFIG.requireTextStyleBinding && node.type === "TEXT" && typeof node.textStyleId !== "string") {
@@ -204,6 +263,38 @@ function auditPage(page) {
         name: node.name,
         issue: "select-value-text-wraps-instead-of-truncating",
         detail: "Dropdown/select value text must mimic CSS white-space: nowrap; overflow: hidden; text-overflow: ellipsis. Set fixed text width, textAutoResize/TRUNCATE or textTruncation/ENDING, and keep it to one line so long labels do not wrap inside controls."
+      });
+    }
+
+    if (CONFIG.requireNoSyntheticOptionalStatus && isSyntheticOptionalStatusText(node)) {
+      syntheticOptionalStatusTextNodes.push({
+        id: node.id,
+        name: node.name,
+        text: node.characters.slice(0, 80),
+        path: nodeNamePath(node, 6)
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "synthetic-optional-status-text",
+        detail: "Do not add placeholder status text such as `可选` to unselected payment/method rows unless the source webpage actually renders that text. Unselected rows should stay plain; only selected/current states get badges."
+      });
+    }
+
+    if (CONFIG.requireTimelineProgressNotButtons && isButtonLikeProgressText(node)) {
+      buttonLikeProgressTextNodes.push({
+        id: node.id,
+        name: node.name,
+        text: node.characters.slice(0, 80),
+        path: nodeNamePath(node, 6)
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "progress-step-rendered-as-button",
+        detail: "Order/progress steps should be a global timeline or stepper outside the detail panels, not filled button-like pills. Keep dots/lines as the progress affordance and reserve filled badges for the current status label."
       });
     }
 
@@ -305,6 +396,8 @@ function auditPage(page) {
     nodesWithoutFillVariable: nodesWithoutFillVariable.slice(0, 40),
     nodesWithoutStrokeVariable: nodesWithoutStrokeVariable.slice(0, 40),
     selectValueTextWithoutTruncationNodes: selectValueTextWithoutTruncationNodes.slice(0, 40),
+    syntheticOptionalStatusTextNodes: syntheticOptionalStatusTextNodes.slice(0, 40),
+    buttonLikeProgressTextNodes: buttonLikeProgressTextNodes.slice(0, 40),
     violations
   };
 }
@@ -325,5 +418,5 @@ return {
   violationCount: violations.length,
   violations,
   pages: pagesReport,
-  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, bind every final solid text fill, node fill, and stroke to color variables, and keep dropdown/select value text single-line truncated like the source CSS. Reuse variables first; create missing color variables with a trailing * before binding."
+  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, bind every final solid text fill, node fill, and stroke to color variables, keep dropdown/select value text single-line truncated like the source CSS, do not add synthetic unselected status labels, and render order progress as a global timeline instead of button-like pills. Reuse variables first; create missing color variables with a trailing * before binding."
 };

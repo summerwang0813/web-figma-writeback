@@ -299,6 +299,10 @@ Before calling a sync complete, verify:
 - Repeated typography uses callable text styles, not duplicated one-off layer values.
 - No large screenshot/image component is being used as the final page/module body.
 - No accidental selected, hover, disabled, or active states were added.
+- No synthetic unselected-state labels were added. Payment/selectable rows should only show status badges that the live webpage renders.
+- Order, checkout, payment, and task progress is represented as a global stepper/timeline when the source uses global progress, not as a row of button-like pills inside a card.
+- Status badges use distinct semantic state variables for pending, processing, in-transit/receiving, complete, cancelled, and after-sales/danger states.
+- Address forms keep captured row grouping exactly, including province/city/district as one row when present and detailed address as a separate full-width row.
 - Sticky/floating layers keep appropriate elevation; same-level content stays flat when source is flat.
 
 ## Common Fixes
@@ -307,4 +311,5 @@ Before calling a sync complete, verify:
 - If icons drift, use the source SVG `viewBox` and a fixed icon box.
 - If images drift, compare outer frame, image fill, and clip settings separately.
 - If text touches a button edge, inspect button padding and line-height before changing font size.
+- If a returned screenshot shows large blank gaps, inspect the corresponding nodes for stale deleted fields, hidden modals, or spacer rectangles; remove or resize the offending module instead of covering it with another frame.
 - If a Figma write fails, send a small probe, reduce payload size, and split modules further.

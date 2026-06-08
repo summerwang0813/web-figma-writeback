@@ -130,6 +130,10 @@ If the webpage uses an exact typography value that does not exist in the target 
 - Do not create unmarked new typography. Any newly created Text Style must end with `*`; existing component-library Text Styles keep their original names.
 - Do not treat the current website's product/project name as the skill name; this skill applies to any generated website.
 - Do not add states the source does not have, such as making static detail rows look selected.
+- Do not add synthetic state labels that the source page does not render. For example, unselected payment rows should not get a `可选` pill if the webpage only shows a badge on the selected row.
+- Ecommerce/order status badges must use semantic state colors, not one shared green style. Use distinct variable-bound styles for pending payment, processing, in transit/receiving, completed, cancelled, and after-sales/danger states.
+- Order or task progress must be global to the flow/module and placed outside the detail cards when the source does so. It should render as a timeline/stepper with dots and lines, not as button-like filled pills.
+- Address forms must preserve the captured field grouping. If the source uses province/city/district on one row and the detailed address on the next full row, do not collapse it into mixed columns or add deleted fields such as delivery remarks.
 - Do not add shadows to same-level cards if the source uses flat layers; keep shadows for floating/sticky layers only.
 - Do not use placeholder images when real page assets are available.
 - Do not hand-draw icons when the webpage SVG or design-system icon exists.
