@@ -21,6 +21,7 @@ If the user explicitly says "同步到网页" or "同步到代码", inspect Figm
 - Search and reuse the target Figma file's design-system components, styles, and variables before creating anything.
 - If the target file has no usable component library or variables, create a fallback design-system foundation before writing the page.
 - If a needed color, text style, spacing token, or component variant is missing, create or extend the design system first, then bind page nodes to it.
+- Variables are mandatory for reusable design values. If variables exist, reuse matching variables first. If the file has no variables, create the fallback variable collections first. If variables exist but a required color is missing, create the missing color variable with a trailing `*` in its name, then bind the node to it.
 
 ## Editable Writeback Contract
 
@@ -76,7 +77,7 @@ If the webpage uses an exact typography value that does not exist in the target 
    - Run `scripts/figma-design-system-preflight.js` and summarize the existing components, variables, styles, and gaps.
    - Import matching component instances from the component library when available.
    - If no component library exists, create the fallback `01 Base / 02 Semantic / 03 Spacing / 04 Typography` system first.
-   - Bind fills, strokes, and text colors to existing variables.
+   - Bind fills, strokes, and text colors to variables. If a matching variable exists, use it. If no variables exist, create fallback variables first. If variables exist but the needed color is missing, create a semantic color variable with `*` at the end of its name, then bind to it.
    - Text fills must bind to `TEXT_FILL` color variables such as semantic `text/title`, `text/default`, `text/body`, `text/muted`, `text/white`, `action/primary`, and state colors. A raw solid color on a final text layer is not complete.
    - Bind typography to text styles; do not leave repeated font settings as one-off layer properties.
    - Resolve each captured text block to a semantic Text Style before writing: brand mark, H1/H2, section title, card title, body, caption, label, badge/status, link, price, gallery arrow, and button label.
@@ -122,6 +123,7 @@ If the webpage uses an exact typography value that does not exist in the target 
 - Do not build page-specific one-off colors, fonts, or controls when the Figma component library has a matching asset.
 - Do not use a screenshot or image component as the final editable page/module. Full-page screenshots belong only in reference layers or verification artifacts.
 - Do not write a page into a file with no design-system foundation; create `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography` first.
+- Do not leave final fills or strokes as raw solid colors. All solid text fills, shape fills, frame fills, and strokes must bind to color variables. Missing color variables created during sync must end with `*`.
 - Do not hardcode typography on repeated text nodes; create callable text styles and apply them.
 - Do not leave final `TEXT` nodes without `textStyleId`. If the component library has a matching Text Style, bind it; if not, create the missing `04 Typography/...` style and bind it before completion.
 - Do not leave final text fills as raw solid colors. Every solid text fill must be bound to an existing color variable; create a missing semantic text color variable only when the file lacks a match.

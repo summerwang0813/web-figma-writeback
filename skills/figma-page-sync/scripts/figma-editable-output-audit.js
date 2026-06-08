@@ -10,6 +10,7 @@ const CONFIG = {
   minEditableTextNodesPerPage: 3,
   requireTextStyleBinding: true,
   requireTextFillVariableBinding: true,
+  requireSolidPaintVariableBinding: true,
   screenshotNamePattern: /screenshot|full.?page|reference|截图|整页|页面截图/i,
   assetPageNamePattern: /asset|component|library|组件|素材|page 1/i
 };
@@ -22,11 +23,30 @@ function hasSolidOrGradientFill(node) {
   return Array.isArray(node.fills) && node.fills.some((fill) => fill.type !== "IMAGE");
 }
 
+function hasUnboundSolidPaint(paints) {
+  if (!Array.isArray(paints)) return false;
+  return paints.some((paint) =>
+    paint.type === "SOLID" && !paint.boundVariables?.color
+  );
+}
+
 function hasUnboundSolidTextFill(node) {
   if (node.type !== "TEXT" || !Array.isArray(node.fills)) return false;
-  return node.fills.some((fill) =>
-    fill.type === "SOLID" && !fill.boundVariables?.color
-  );
+  return hasUnboundSolidPaint(node.fills);
+}
+
+function hasInspectableSolidFill(node) {
+  return Array.isArray(node.fills) &&
+    node.fills.some((paint) => paint.type === "SOLID");
+}
+
+function hasInspectableSolidStroke(node) {
+  return Array.isArray(node.strokes) &&
+    node.strokes.some((paint) => paint.type === "SOLID");
+}
+
+function looksLikeReferenceNode(node) {
+  return CONFIG.screenshotNamePattern.test(node.name || "");
 }
 
 function isLargeImageNode(node) {
@@ -52,10 +72,14 @@ function countEditableNodes(root) {
     largeImages: 0,
     imageOnlyLargeNodes: 0,
     textWithoutStyle: 0,
-    textWithoutFillVariable: 0
+    textWithoutFillVariable: 0,
+    nodesWithoutFillVariable: 0,
+    nodesWithoutStrokeVariable: 0
   };
 
   walk(root, (node) => {
+    const isReference = looksLikeReferenceNode(node);
+
     if (node.type === "TEXT") {
       counts.text += 1;
       if (CONFIG.requireTextStyleBinding && typeof node.textStyleId !== "string") {
@@ -64,6 +88,23 @@ function countEditableNodes(root) {
       if (CONFIG.requireTextFillVariableBinding && hasUnboundSolidTextFill(node)) {
         counts.textWithoutFillVariable += 1;
       }
+    }
+    if (
+      CONFIG.requireSolidPaintVariableBinding &&
+      !isReference &&
+      node.type !== "TEXT" &&
+      hasInspectableSolidFill(node) &&
+      hasUnboundSolidPaint(node.fills)
+    ) {
+      counts.nodesWithoutFillVariable += 1;
+    }
+    if (
+      CONFIG.requireSolidPaintVariableBinding &&
+      !isReference &&
+      hasInspectableSolidStroke(node) &&
+      hasUnboundSolidPaint(node.strokes)
+    ) {
+      counts.nodesWithoutStrokeVariable += 1;
     }
     if (node.type === "FRAME" || node.type === "GROUP" || node.type === "SECTION") counts.frames += 1;
     if (node.type === "INSTANCE") counts.instances += 1;
@@ -87,6 +128,8 @@ function auditPage(page) {
   const largeImageNodes = [];
   const textWithoutStyleNodes = [];
   const textWithoutFillVariableNodes = [];
+  const nodesWithoutFillVariable = [];
+  const nodesWithoutStrokeVariable = [];
 
   walk(page, (node) => {
     if (CONFIG.requireTextStyleBinding && node.type === "TEXT" && typeof node.textStyleId !== "string") {
@@ -119,10 +162,53 @@ function auditPage(page) {
       });
     }
 
+    const isReference = looksLikeReferenceNode(node);
+
+    if (
+      CONFIG.requireSolidPaintVariableBinding &&
+      !isReference &&
+      node.type !== "TEXT" &&
+      hasInspectableSolidFill(node) &&
+      hasUnboundSolidPaint(node.fills)
+    ) {
+      nodesWithoutFillVariable.push({
+        id: node.id,
+        type: node.type,
+        name: node.name
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "node-fill-without-color-variable",
+        detail: "Final editable solid fills must bind to color variables. Reuse existing variables first; if the file has variables but the needed color is missing, create a color variable with a trailing * and bind this fill to it."
+      });
+    }
+
+    if (
+      CONFIG.requireSolidPaintVariableBinding &&
+      !isReference &&
+      hasInspectableSolidStroke(node) &&
+      hasUnboundSolidPaint(node.strokes)
+    ) {
+      nodesWithoutStrokeVariable.push({
+        id: node.id,
+        type: node.type,
+        name: node.name
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "node-stroke-without-color-variable",
+        detail: "Final editable solid strokes must bind to color variables. Reuse existing variables first; if the file has variables but the needed color is missing, create a color variable with a trailing * and bind this stroke to it."
+      });
+    }
+
     if (!isLargeImageNode(node)) return;
 
     const childCount = "children" in node ? node.children.length : 0;
-    const looksLikeReference = CONFIG.screenshotNamePattern.test(node.name);
+    const looksLikeReference = looksLikeReferenceNode(node);
     largeImageNodes.push({
       id: node.id,
       type: node.type,
@@ -171,6 +257,8 @@ function auditPage(page) {
     largeImageNodes,
     textWithoutStyleNodes: textWithoutStyleNodes.slice(0, 40),
     textWithoutFillVariableNodes: textWithoutFillVariableNodes.slice(0, 40),
+    nodesWithoutFillVariable: nodesWithoutFillVariable.slice(0, 40),
+    nodesWithoutStrokeVariable: nodesWithoutStrokeVariable.slice(0, 40),
     violations
   };
 }
@@ -191,5 +279,5 @@ return {
   violationCount: violations.length,
   violations,
   pages: pagesReport,
-  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles and color variables, and use screenshots only as references."
+  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, and bind every final solid text fill, node fill, and stroke to color variables. Reuse variables first; create missing color variables with a trailing * before binding."
 };

@@ -15,6 +15,7 @@ This plugin is website-agnostic. It can be used with any generated or implemente
   - `03 Spacing`
   - `04 Typography`
 - Applies reusable typography styles instead of one-off text styling.
+- Forces final solid text fills, node fills, and strokes to bind to Figma variables. If variables already exist but a needed color is missing, the plugin workflow creates the missing color variable with a trailing `*` before binding it.
 - Uses screenshots only as references for verification, not as the final editable page.
 - Verifies Figma output against the captured webpage layout and screenshots.
 
@@ -24,7 +25,7 @@ This plugin is not a screenshot-to-Figma exporter. A full-page screenshot, image
 
 The final Figma output should be editable: text nodes for text, component instances for controls, frames/auto-layout for modules, vectors/SVGs for icons, and image fills only for real webpage images such as product photos or hero media.
 
-Before writing, run the design-system preflight so the target file's existing components, variables, and typography styles are reused. If the target file has no usable design system, create the fallback foundations first.
+Before writing, run the design-system preflight so the target file's existing components, variables, and typography styles are reused. If the target file has no usable design system, create the fallback foundations first. Final editable output must not leave raw solid colors on text, fills, or strokes.
 
 ## Structure
 

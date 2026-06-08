@@ -8,7 +8,7 @@ This reference expands the `figma-page-sync` skill for writing generated or impl
 2. Keep Figma nodes semantically aligned with webpage modules.
 3. Search and reuse the Figma file's component library, styles, and variables before creating local nodes from scratch.
 4. If the file has no usable component library, create a fallback foundation before writing the page: `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography`.
-5. Bind colors, spacing, and text to Figma variables/styles; create missing variables/styles before applying them.
+5. Bind colors, spacing, and text to Figma variables/styles; create missing variables/styles before applying them. Existing variables are mandatory reuse targets.
 6. Use real images, real object-fit behavior, and real coordinates.
 7. Write and verify in sections, not as one huge unverified operation.
 8. Avoid invented states, decorative effects, and layout shortcuts.
@@ -52,15 +52,21 @@ Recommended file names:
    - Summarize existing variable collections and text/paint styles.
    - Decide which values can be reused and which fallback tokens must be created.
 2. Import matching components for buttons, inputs, selectors, tabs, badges, order cards, navigation, icons, and common ecommerce controls.
-3. Use library text styles and color variables when available.
+3. Use variables for every reusable design value.
+   - If matching variables exist, bind to them.
+   - If the target file has no variables, create the fallback `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography` variable collections before drawing modules.
+   - If variables exist but a needed color is missing, create the missing color variable in the appropriate existing semantic/base collection and add a trailing `*` to the variable name, such as `text/price*` or `border/active*`.
+   - Newly created color variables must immediately be bound to the node that needed them; do not create variables as unused documentation.
+   - Final solid fills and strokes on editable UI nodes must not remain raw colors.
+4. Use library text styles and color variables when available.
    - Every final text node must have a `textStyleId`.
    - Every solid text fill must be bound to a color variable with `TEXT_FILL` scope. Prefer semantic text variables over primitive colors.
    - Reuse variables such as `text/title`, `text/default`, `text/body`, `text/muted`, `text/white`, `action/primary`, and state colors when they exist.
    - Match text semantically first: brand/logo, display title, section title, inline/card title, body, caption, field label, badge/status, link, price, gallery arrow, and button label.
    - If no existing Text Style matches, create the missing `04 Typography/...` or semantic `Web / ...` style with a trailing `*`, then bind the text node to that style.
    - Existing component-library Text Styles keep their original names; only newly created Text Styles get the `*` marker.
-4. If no suitable library exists, create the fallback foundation below before drawing page modules.
-5. Set correct scopes:
+5. If no suitable library exists, create the fallback foundation below before drawing page modules.
+6. Set correct scopes:
    - Text colors: `TEXT_FILL`
    - Background fills: `FRAME_FILL`, `SHAPE_FILL`
    - Borders: `STROKE_COLOR`
@@ -73,6 +79,7 @@ Use `STROKE_COLOR`, not the older `STROKE` scope.
 The plugin must rebuild UI as editable Figma structure:
 
 - Text from the webpage becomes Figma text nodes using reusable text styles and bound text-fill variables. Raw CSS font values and raw solid colors are allowed only for matching and variable/style creation; final output must reference Text Styles and color variables.
+- Editable UI fills and strokes must bind to variables. Raw solid fills/strokes are acceptable only on temporary reference layers, uploaded image fills, or during intermediate construction before binding.
 - Buttons, selectors, inputs, tabs, cards, badges, modals, order rows, and navigation use library components when available; otherwise create editable fallback components before using them.
 - Icons use the library icon component or the webpage SVG/vector source.
 - Real webpage images use image fills with uploaded `imageHash` values.
@@ -285,6 +292,8 @@ Before calling a sync complete, verify:
 - Icons are centered and use the same SVG/component source.
 - Figma component instances, variables, and text styles are used when available.
 - Missing design-system values were added to `01 Base`, `02 Semantic`, `03 Spacing`, or `04 Typography` before use.
+- Any newly created color variable has a trailing `*` in its name and is actually bound to at least one final node.
+- No final editable UI solid fill, text fill, or stroke remains as a raw color.
 - Repeated typography uses callable text styles, not duplicated one-off layer values.
 - No large screenshot/image component is being used as the final page/module body.
 - No accidental selected, hover, disabled, or active states were added.

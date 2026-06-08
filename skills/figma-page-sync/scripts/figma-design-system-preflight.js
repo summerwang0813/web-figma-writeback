@@ -36,6 +36,25 @@ const REQUIRED_TEXT_STYLES = [
   "04 Typography/Button/Secondary"
 ];
 
+const REQUIRED_SEMANTIC_COLOR_VARIABLES = [
+  "text/title",
+  "text/body",
+  "text/muted",
+  "text/white",
+  "bg/page",
+  "bg/surface",
+  "bg/subtle",
+  "border/default",
+  "border/strong",
+  "action/primary",
+  "action/primary-hover",
+  "action/weak",
+  "state/success",
+  "state/warning",
+  "state/danger",
+  "state/disabled-text"
+];
+
 const WRITEBACK_ASSET_COMPONENT_PATTERN =
   /^web-figma-writeback\/assets\/|screenshot|full.?page|reference|截图|整页|页面截图/i;
 
@@ -184,6 +203,8 @@ function componentSummary(components, componentSets) {
 function variableSummary(collections, variables) {
   const byCollectionId = new Map(collections.map((collection) => [collection.id, collection]));
   const byCollection = {};
+  const colorVariables = [];
+  const semanticColorNames = new Set();
 
   for (const variable of variables) {
     const collection = byCollectionId.get(variable.variableCollectionId);
@@ -200,22 +221,35 @@ function variableSummary(collections, variables) {
         scopes: variable.scopes || []
       });
     }
+    if (variable.resolvedType === "COLOR") {
+      colorVariables.push(variable);
+      if (collectionName === "02 Semantic") {
+        semanticColorNames.add(variable.name);
+      }
+    }
   }
 
   const collectionNames = collections.map((collection) => collection.name);
   const missingFoundationCollections = REQUIRED_FOUNDATION_COLLECTIONS
     .filter((name) => !collectionNames.includes(name));
+  const missingSemanticColorVariables = REQUIRED_SEMANTIC_COLOR_VARIABLES
+    .filter((name) => !semanticColorNames.has(name));
 
   return {
     totalCollections: collections.length,
     totalVariables: variables.length,
+    totalColorVariables: colorVariables.length,
+    totalSemanticColorVariables: semanticColorNames.size,
     collections: collections.map((collection) => ({
       id: collection.id,
       name: collection.name,
       modes: collection.modes.map((mode) => mode.name)
     })),
     byCollection,
-    missingFoundationCollections
+    missingFoundationCollections,
+    missingSemanticColorVariables,
+    requiredColorBindingRule:
+      "Every final solid text fill, fill, and stroke must bind to variables. If variables exist but a needed color is missing, create the missing color variable with a trailing * and bind it immediately."
   };
 }
 
@@ -277,18 +311,26 @@ return {
     hasAnyReusableComponents:
       componentsReport.totalReusableComponents + componentsReport.totalReusableComponentSets > 0,
     hasVariables: variables.length > 0,
+    hasColorVariables: variablesReport.totalColorVariables > 0,
+    hasSemanticColorVariables: variablesReport.totalSemanticColorVariables > 0,
     hasTypographyStyles: textStyles.length > 0,
     missingReusableRoles,
     missingFoundationCollections: variablesReport.missingFoundationCollections,
+    missingSemanticColorVariables: variablesReport.missingSemanticColorVariables,
     missingFallbackTextStyles: stylesReport.missingFallbackTextStyles,
     mustCreateFallbackFoundation:
       variablesReport.missingFoundationCollections.length > 0 ||
       textStyles.length === 0,
+    mustCreateMissingColorVariables:
+      variables.length === 0 ||
+      variablesReport.totalColorVariables === 0 ||
+      variablesReport.missingSemanticColorVariables.length > 0,
     screenshotAsFinalOutputAllowed: false
   },
   nextSteps: [
     "Map each webpage module to existing components before creating local nodes.",
-    "Create only missing fallback variables/styles before drawing editable modules.",
+    "Create only missing fallback variables/styles before drawing editable modules. When creating missing color variables in an existing variable system, append * to each new color variable name.",
+    "Bind every final solid text fill, node fill, and stroke to variables. Do not leave raw solid colors on editable output.",
     "Use real image fills only for webpage image assets, never for whole-page screenshots.",
     "Run figma-editable-output-audit.js after writing modules."
   ]
