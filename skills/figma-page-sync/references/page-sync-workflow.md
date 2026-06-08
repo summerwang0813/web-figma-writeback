@@ -82,6 +82,7 @@ The plugin must rebuild UI as editable Figma structure:
 - Text from the webpage becomes Figma text nodes using reusable text styles and bound text-fill variables. Raw CSS font values and raw solid colors are allowed only for matching and variable/style creation; final output must reference Text Styles and color variables.
 - Editable UI fills and strokes must bind to variables. Raw solid fills/strokes are acceptable only on temporary reference layers, uploaded image fills, or during intermediate construction before binding.
 - Buttons, selectors, inputs, tabs, cards, badges, modals, order rows, and navigation use library components when available; otherwise create editable fallback components before using them.
+- Select and dropdown value text must use fixed-width one-line truncation to match source CSS `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`; long option labels must not wrap inside controls.
 - Icons use the library icon component or the webpage SVG/vector source.
 - Real webpage images use image fills with uploaded `imageHash` values.
 - Full-page screenshots may be placed only as locked/reference layers named `Reference Screenshot`, or kept in local verification artifacts.

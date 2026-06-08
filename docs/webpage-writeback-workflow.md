@@ -100,6 +100,7 @@
 - solid `strokes` 绑定到 `STROKE_COLOR` 变量。
 - 新增的缺失颜色变量必须立即绑定到使用它的节点，不能只创建不引用。
 - 绑定变量前要核对 preflight 输出的 resolved hex。比如网页模块浅灰底是 `#F7F8F9`，就不能绑定到解析为白色的 `bg/page` 变量。
+- 下拉框/选择器的值文本必须复刻网页 `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`，Figma 中要固定文本宽度并设置单行截断，长地区名不能在控件里换行。
 
 没有时，在当前文件创建本地变量集合，例如：
 

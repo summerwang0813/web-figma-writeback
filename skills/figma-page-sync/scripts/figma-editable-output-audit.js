@@ -11,6 +11,9 @@ const CONFIG = {
   requireTextStyleBinding: true,
   requireTextFillVariableBinding: true,
   requireSolidPaintVariableBinding: true,
+  requireSelectValueTruncation: true,
+  maxSelectValueTextHeight: 24,
+  selectValueNamePattern: /select value|dropdown value|picker value|选择器值|下拉值/i,
   screenshotNamePattern: /screenshot|full.?page|reference|截图|整页|页面截图/i,
   assetPageNamePattern: /asset|component|library|组件|素材|page 1/i
 };
@@ -49,6 +52,16 @@ function looksLikeReferenceNode(node) {
   return CONFIG.screenshotNamePattern.test(node.name || "");
 }
 
+function isSelectValueText(node) {
+  return node.type === "TEXT" && CONFIG.selectValueNamePattern.test(node.name || "");
+}
+
+function hasSingleLineTruncation(node) {
+  return node.textAutoResize === "TRUNCATE" ||
+    node.textTruncation === "ENDING" ||
+    node.maxLines === 1;
+}
+
 function isLargeImageNode(node) {
   return hasImageFill(node) &&
     node.width >= CONFIG.minLargeImageWidth &&
@@ -74,7 +87,8 @@ function countEditableNodes(root) {
     textWithoutStyle: 0,
     textWithoutFillVariable: 0,
     nodesWithoutFillVariable: 0,
-    nodesWithoutStrokeVariable: 0
+    nodesWithoutStrokeVariable: 0,
+    selectValueTextWithoutTruncation: 0
   };
 
   walk(root, (node) => {
@@ -87,6 +101,13 @@ function countEditableNodes(root) {
       }
       if (CONFIG.requireTextFillVariableBinding && hasUnboundSolidTextFill(node)) {
         counts.textWithoutFillVariable += 1;
+      }
+      if (
+        CONFIG.requireSelectValueTruncation &&
+        isSelectValueText(node) &&
+        (!hasSingleLineTruncation(node) || node.height > CONFIG.maxSelectValueTextHeight)
+      ) {
+        counts.selectValueTextWithoutTruncation += 1;
       }
     }
     if (
@@ -130,6 +151,7 @@ function auditPage(page) {
   const textWithoutFillVariableNodes = [];
   const nodesWithoutFillVariable = [];
   const nodesWithoutStrokeVariable = [];
+  const selectValueTextWithoutTruncationNodes = [];
 
   walk(page, (node) => {
     if (CONFIG.requireTextStyleBinding && node.type === "TEXT" && typeof node.textStyleId !== "string") {
@@ -159,6 +181,29 @@ function auditPage(page) {
         name: node.name,
         issue: "text-node-without-fill-variable",
         detail: "Final editable text fills must bind to color variables via paint.boundVariables.color. Use semantic TEXT_FILL variables such as text/title, text/body, text/muted, text/white, action/primary, and state colors."
+      });
+    }
+
+    if (
+      CONFIG.requireSelectValueTruncation &&
+      isSelectValueText(node) &&
+      (!hasSingleLineTruncation(node) || node.height > CONFIG.maxSelectValueTextHeight)
+    ) {
+      selectValueTextWithoutTruncationNodes.push({
+        id: node.id,
+        name: node.name,
+        text: node.characters.slice(0, 80),
+        height: Math.round(node.height),
+        textAutoResize: node.textAutoResize,
+        textTruncation: node.textTruncation,
+        maxLines: node.maxLines
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "select-value-text-wraps-instead-of-truncating",
+        detail: "Dropdown/select value text must mimic CSS white-space: nowrap; overflow: hidden; text-overflow: ellipsis. Set fixed text width, textAutoResize/TRUNCATE or textTruncation/ENDING, and keep it to one line so long labels do not wrap inside controls."
       });
     }
 
@@ -259,6 +304,7 @@ function auditPage(page) {
     textWithoutFillVariableNodes: textWithoutFillVariableNodes.slice(0, 40),
     nodesWithoutFillVariable: nodesWithoutFillVariable.slice(0, 40),
     nodesWithoutStrokeVariable: nodesWithoutStrokeVariable.slice(0, 40),
+    selectValueTextWithoutTruncationNodes: selectValueTextWithoutTruncationNodes.slice(0, 40),
     violations
   };
 }
@@ -279,5 +325,5 @@ return {
   violationCount: violations.length,
   violations,
   pages: pagesReport,
-  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, and bind every final solid text fill, node fill, and stroke to color variables. Reuse variables first; create missing color variables with a trailing * before binding."
+  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, bind every final solid text fill, node fill, and stroke to color variables, and keep dropdown/select value text single-line truncated like the source CSS. Reuse variables first; create missing color variables with a trailing * before binding."
 };
