@@ -299,6 +299,7 @@ Before calling a sync complete, verify:
 - Repeated typography uses callable text styles, not duplicated one-off layer values.
 - No large screenshot/image component is being used as the final page/module body.
 - No accidental selected, hover, disabled, or active states were added.
+- Select/dropdown chevrons are vector/SVG/icon nodes, not text glyphs such as `⌄`, `v`, or `▼`.
 - No synthetic unselected-state labels were added. Payment/selectable rows should only show status badges that the live webpage renders.
 - Order, checkout, payment, and task progress is represented as a global stepper/timeline when the source uses global progress, not as a row of button-like pills inside a card.
 - Status badges use distinct semantic state variables for pending, processing, in-transit/receiving, complete, cancelled, and after-sales/danger states.

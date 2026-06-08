@@ -139,6 +139,7 @@ If the webpage uses an exact typography value that does not exist in the target 
 - Do not hand-draw icons when the webpage SVG or design-system icon exists.
 - Do not let controls inherit browser-default appearance in Figma. Selects, dropdowns, inputs, and buttons must be rebuilt from captured custom control geometry and design-system tokens.
 - Select/dropdown value text must follow the captured CSS `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`. In Figma, set the value text to a fixed inner width with one-line truncation so long labels such as region names do not wrap inside the control.
+- Select/dropdown chevrons must use vector/SVG/icon nodes from the source or component library, not text glyphs such as `⌄`, `v`, or `▼`.
 - Button labels must use the captured computed text color from the real button/control. Primary or dark buttons with green/dark fills usually have white labels; never let those labels fall back to the body text color.
 - Login, registration, empty, modal, dropdown, and other flow states must be captured from the real route/state. Do not replace a real page state with a simplified flow placeholder or an empty illustrative area.
 - Keep button radius, padding, text alignment, and vertical breathing room exact; button text must not touch edges.

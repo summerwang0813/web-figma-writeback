@@ -12,10 +12,13 @@ const CONFIG = {
   requireTextFillVariableBinding: true,
   requireSolidPaintVariableBinding: true,
   requireSelectValueTruncation: true,
+  requireNoTextGlyphSelectIcons: true,
   requireNoSyntheticOptionalStatus: true,
   requireTimelineProgressNotButtons: true,
   maxSelectValueTextHeight: 24,
   selectValueNamePattern: /select value|dropdown value|picker value|选择器值|下拉值/i,
+  selectIconNamePattern: /select|dropdown|picker|chevron|arrow|选择|下拉|省份|城市|区县|电话|地区/i,
+  selectIconGlyphPattern: /^(v|V|⌄|⌃|⌵|⌄|▾|▼|▲|∨|∧|˅|﹀|˄|⌃|>)$/,
   syntheticOptionalStatusPattern: /^可选$/,
   statusNodeNamePattern: /status|badge|pill|tag|payment|method|状态|标签|徽标|支付/i,
   progressStepTextPattern: /^(待付款|待发货|待收货|已签收|已完成|售后处理中|已取消)$/,
@@ -60,6 +63,12 @@ function looksLikeReferenceNode(node) {
 
 function isSelectValueText(node) {
   return node.type === "TEXT" && CONFIG.selectValueNamePattern.test(node.name || "");
+}
+
+function isTextGlyphSelectIcon(node) {
+  if (node.type !== "TEXT") return false;
+  if (!CONFIG.selectIconGlyphPattern.test((node.characters || "").trim())) return false;
+  return CONFIG.selectIconNamePattern.test(nodeNamePath(node, 6));
 }
 
 function nodeNamePath(node, limit = 4) {
@@ -138,6 +147,7 @@ function countEditableNodes(root) {
     nodesWithoutFillVariable: 0,
     nodesWithoutStrokeVariable: 0,
     selectValueTextWithoutTruncation: 0,
+    textGlyphSelectIcons: 0,
     syntheticOptionalStatusTexts: 0,
     buttonLikeProgressTexts: 0
   };
@@ -159,6 +169,9 @@ function countEditableNodes(root) {
         (!hasSingleLineTruncation(node) || node.height > CONFIG.maxSelectValueTextHeight)
       ) {
         counts.selectValueTextWithoutTruncation += 1;
+      }
+      if (CONFIG.requireNoTextGlyphSelectIcons && isTextGlyphSelectIcon(node)) {
+        counts.textGlyphSelectIcons += 1;
       }
       if (CONFIG.requireNoSyntheticOptionalStatus && isSyntheticOptionalStatusText(node)) {
         counts.syntheticOptionalStatusTexts += 1;
@@ -209,6 +222,7 @@ function auditPage(page) {
   const nodesWithoutFillVariable = [];
   const nodesWithoutStrokeVariable = [];
   const selectValueTextWithoutTruncationNodes = [];
+  const textGlyphSelectIconNodes = [];
   const syntheticOptionalStatusTextNodes = [];
   const buttonLikeProgressTextNodes = [];
 
@@ -263,6 +277,22 @@ function auditPage(page) {
         name: node.name,
         issue: "select-value-text-wraps-instead-of-truncating",
         detail: "Dropdown/select value text must mimic CSS white-space: nowrap; overflow: hidden; text-overflow: ellipsis. Set fixed text width, textAutoResize/TRUNCATE or textTruncation/ENDING, and keep it to one line so long labels do not wrap inside controls."
+      });
+    }
+
+    if (CONFIG.requireNoTextGlyphSelectIcons && isTextGlyphSelectIcon(node)) {
+      textGlyphSelectIconNodes.push({
+        id: node.id,
+        name: node.name,
+        text: node.characters.slice(0, 20),
+        path: nodeNamePath(node, 6)
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "select-icon-rendered-as-text-glyph",
+        detail: "Dropdown/select chevrons must be real vector/SVG/icon nodes from the source or component library, not text glyphs such as `⌄`, `v`, or `▼`. Text glyph icons render inconsistently and look unlike the webpage."
       });
     }
 
@@ -396,6 +426,7 @@ function auditPage(page) {
     nodesWithoutFillVariable: nodesWithoutFillVariable.slice(0, 40),
     nodesWithoutStrokeVariable: nodesWithoutStrokeVariable.slice(0, 40),
     selectValueTextWithoutTruncationNodes: selectValueTextWithoutTruncationNodes.slice(0, 40),
+    textGlyphSelectIconNodes: textGlyphSelectIconNodes.slice(0, 40),
     syntheticOptionalStatusTextNodes: syntheticOptionalStatusTextNodes.slice(0, 40),
     buttonLikeProgressTextNodes: buttonLikeProgressTextNodes.slice(0, 40),
     violations
@@ -418,5 +449,5 @@ return {
   violationCount: violations.length,
   violations,
   pages: pagesReport,
-  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, bind every final solid text fill, node fill, and stroke to color variables, keep dropdown/select value text single-line truncated like the source CSS, do not add synthetic unselected status labels, and render order progress as a global timeline instead of button-like pills. Reuse variables first; create missing color variables with a trailing * before binding."
+  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, bind every final solid text fill, node fill, and stroke to color variables, keep dropdown/select value text single-line truncated like the source CSS, render dropdown chevrons as vector/SVG icons instead of text glyphs, do not add synthetic unselected status labels, and render order progress as a global timeline instead of button-like pills. Reuse variables first; create missing color variables with a trailing * before binding."
 };
