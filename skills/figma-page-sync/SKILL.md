@@ -21,7 +21,7 @@ If the user explicitly says "同步到网页" or "同步到代码", inspect Figm
 - Search and reuse the target Figma file's design-system components, styles, and variables before creating anything.
 - If the target file has no usable component library or variables, create a fallback design-system foundation before writing the page.
 - If a needed color, text style, spacing token, or component variant is missing, create or extend the design system first, then bind page nodes to it.
-- Variables are mandatory for reusable design values. If variables exist, reuse matching variables first. If the file has no variables, create the fallback variable collections first. If variables exist but a required color is missing, create the missing color variable with a trailing `*` in its name, then bind the node to it.
+- Variables are mandatory for reusable design values. If variables exist, reuse matching variables first. A match requires both semantic role and resolved hex value to match the captured CSS color; do not bind a card/surface/module fill to a page-background variable just because the name looks close. If the file has no variables, create the fallback variable collections first. If variables exist but a required color is missing or a similar variable resolves to a different color, create the missing color variable with a trailing `*` in its name, then bind the node to it.
 
 ## Editable Writeback Contract
 
@@ -77,7 +77,7 @@ If the webpage uses an exact typography value that does not exist in the target 
    - Run `scripts/figma-design-system-preflight.js` and summarize the existing components, variables, styles, and gaps.
    - Import matching component instances from the component library when available.
    - If no component library exists, create the fallback `01 Base / 02 Semantic / 03 Spacing / 04 Typography` system first.
-   - Bind fills, strokes, and text colors to variables. If a matching variable exists, use it. If no variables exist, create fallback variables first. If variables exist but the needed color is missing, create a semantic color variable with `*` at the end of its name, then bind to it.
+   - Bind fills, strokes, and text colors to variables. If a matching variable exists, use it. Matching means the variable's role and resolved hex both match the captured CSS color. If no variables exist, create fallback variables first. If variables exist but the needed color is missing, or a nearby variable such as `bg/page` resolves to the wrong color for a `surface`/card/module fill, create a semantic color variable with `*` at the end of its name, then bind to it.
    - Text fills must bind to `TEXT_FILL` color variables such as semantic `text/title`, `text/default`, `text/body`, `text/muted`, `text/white`, `action/primary`, and state colors. A raw solid color on a final text layer is not complete.
    - Bind typography to text styles; do not leave repeated font settings as one-off layer properties.
    - Resolve each captured text block to a semantic Text Style before writing: brand mark, H1/H2, section title, card title, body, caption, label, badge/status, link, price, gallery arrow, and button label.

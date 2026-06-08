@@ -8,7 +8,7 @@ This reference expands the `figma-page-sync` skill for writing generated or impl
 2. Keep Figma nodes semantically aligned with webpage modules.
 3. Search and reuse the Figma file's component library, styles, and variables before creating local nodes from scratch.
 4. If the file has no usable component library, create a fallback foundation before writing the page: `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography`.
-5. Bind colors, spacing, and text to Figma variables/styles; create missing variables/styles before applying them. Existing variables are mandatory reuse targets.
+5. Bind colors, spacing, and text to Figma variables/styles; create missing variables/styles before applying them. Existing variables are mandatory reuse targets only when their semantic role and resolved hex value match the captured CSS.
 6. Use real images, real object-fit behavior, and real coordinates.
 7. Write and verify in sections, not as one huge unverified operation.
 8. Avoid invented states, decorative effects, and layout shortcuts.
@@ -53,9 +53,10 @@ Recommended file names:
    - Decide which values can be reused and which fallback tokens must be created.
 2. Import matching components for buttons, inputs, selectors, tabs, badges, order cards, navigation, icons, and common ecommerce controls.
 3. Use variables for every reusable design value.
-   - If matching variables exist, bind to them.
+   - If matching variables exist, bind to them. Matching requires both semantic role and resolved hex value to match the captured CSS color.
    - If the target file has no variables, create the fallback `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography` variable collections before drawing modules.
-   - If variables exist but a needed color is missing, create the missing color variable in the appropriate existing semantic/base collection and add a trailing `*` to the variable name, such as `text/price*` or `border/active*`.
+   - If variables exist but a needed color is missing, or a similar variable name resolves to a different hex value, create the missing color variable in the appropriate existing semantic/base collection and add a trailing `*` to the variable name, such as `text/price*` or `border/active*`.
+   - Do not bind a card, surface, module, option, or highlighted state fill to a page-background variable just because the variable name looks close. Use preflight `colorVariablesByHex` to confirm the real value.
    - Newly created color variables must immediately be bound to the node that needed them; do not create variables as unused documentation.
    - Final solid fills and strokes on editable UI nodes must not remain raw colors.
 4. Use library text styles and color variables when available.

@@ -15,7 +15,7 @@ This plugin is website-agnostic. It can be used with any generated or implemente
   - `03 Spacing`
   - `04 Typography`
 - Applies reusable typography styles instead of one-off text styling.
-- Forces final solid text fills, node fills, and strokes to bind to Figma variables. If variables already exist but a needed color is missing, the plugin workflow creates the missing color variable with a trailing `*` before binding it.
+- Forces final solid text fills, node fills, and strokes to bind to Figma variables. Variable matching must check both semantic role and resolved hex value from the captured CSS; if variables already exist but a needed color is missing or resolves differently, the plugin workflow creates the missing color variable with a trailing `*` before binding it.
 - Uses screenshots only as references for verification, not as the final editable page.
 - Verifies Figma output against the captured webpage layout and screenshots.
 

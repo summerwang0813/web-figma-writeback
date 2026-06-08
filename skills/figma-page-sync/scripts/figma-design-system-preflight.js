@@ -200,15 +200,67 @@ function componentSummary(components, componentSets) {
   };
 }
 
+function colorValueToHex(value) {
+  if (!value || typeof value.r !== "number" || typeof value.g !== "number" || typeof value.b !== "number") {
+    return null;
+  }
+  const to255 = (channel) =>
+    Math.round(Math.max(0, Math.min(1, channel)) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  const rgb = `#${to255(value.r)}${to255(value.g)}${to255(value.b)}`.toUpperCase();
+  return typeof value.a === "number" && value.a < 1
+    ? `${rgb}@${Number(value.a.toFixed(3))}`
+    : rgb;
+}
+
+function getDefaultModeValue(variable, collection) {
+  const modeId = collection?.defaultModeId || collection?.modes?.[0]?.modeId;
+  return modeId ? variable.valuesByMode?.[modeId] : undefined;
+}
+
+function resolveVariableValue(variable, byVariableId, byCollectionId, seen = new Set()) {
+  if (!variable || seen.has(variable.id)) {
+    return { valueHex: null, aliasTo: null, aliasChain: [], unresolved: true };
+  }
+
+  seen.add(variable.id);
+  const collection = byCollectionId.get(variable.variableCollectionId);
+  const value = getDefaultModeValue(variable, collection);
+
+  if (value?.type === "VARIABLE_ALIAS" && value.id) {
+    const target = byVariableId.get(value.id);
+    const resolved = resolveVariableValue(target, byVariableId, byCollectionId, seen);
+    return {
+      valueHex: resolved.valueHex,
+      aliasTo: target?.name || value.id,
+      aliasChain: [target?.name || value.id, ...resolved.aliasChain],
+      unresolved: resolved.unresolved
+    };
+  }
+
+  return {
+    valueHex: colorValueToHex(value),
+    aliasTo: null,
+    aliasChain: [],
+    unresolved: !colorValueToHex(value)
+  };
+}
+
 function variableSummary(collections, variables) {
   const byCollectionId = new Map(collections.map((collection) => [collection.id, collection]));
+  const byVariableId = new Map(variables.map((variable) => [variable.id, variable]));
   const byCollection = {};
   const colorVariables = [];
   const semanticColorNames = new Set();
+  const colorVariablesByHex = {};
 
   for (const variable of variables) {
     const collection = byCollectionId.get(variable.variableCollectionId);
     const collectionName = collection ? collection.name : "Unassigned";
+    const resolved = variable.resolvedType === "COLOR"
+      ? resolveVariableValue(variable, byVariableId, byCollectionId)
+      : { valueHex: null, aliasTo: null, aliasChain: [], unresolved: false };
     if (!byCollection[collectionName]) {
       byCollection[collectionName] = { count: 0, variables: [] };
     }
@@ -218,11 +270,26 @@ function variableSummary(collections, variables) {
         id: variable.id,
         name: variable.name,
         type: variable.resolvedType,
-        scopes: variable.scopes || []
+        scopes: variable.scopes || [],
+        valueHex: resolved.valueHex,
+        aliasTo: resolved.aliasTo,
+        unresolved: resolved.unresolved
       });
     }
     if (variable.resolvedType === "COLOR") {
       colorVariables.push(variable);
+      if (resolved.valueHex) {
+        if (!colorVariablesByHex[resolved.valueHex]) colorVariablesByHex[resolved.valueHex] = [];
+        if (colorVariablesByHex[resolved.valueHex].length < 12) {
+          colorVariablesByHex[resolved.valueHex].push({
+            id: variable.id,
+            name: variable.name,
+            collection: collectionName,
+            scopes: variable.scopes || [],
+            aliasTo: resolved.aliasTo
+          });
+        }
+      }
       if (collectionName === "02 Semantic") {
         semanticColorNames.add(variable.name);
       }
@@ -246,10 +313,11 @@ function variableSummary(collections, variables) {
       modes: collection.modes.map((mode) => mode.name)
     })),
     byCollection,
+    colorVariablesByHex,
     missingFoundationCollections,
     missingSemanticColorVariables,
     requiredColorBindingRule:
-      "Every final solid text fill, fill, and stroke must bind to variables. If variables exist but a needed color is missing, create the missing color variable with a trailing * and bind it immediately."
+      "Every final solid text fill, fill, and stroke must bind to variables. Reuse a variable only when both its semantic role and resolved hex match the captured CSS color. If variables exist but the matching color is missing or a similar variable resolves to a different hex, create the missing color variable with a trailing * and bind it immediately."
   };
 }
 
@@ -330,7 +398,7 @@ return {
   nextSteps: [
     "Map each webpage module to existing components before creating local nodes.",
     "Create only missing fallback variables/styles before drawing editable modules. When creating missing color variables in an existing variable system, append * to each new color variable name.",
-    "Bind every final solid text fill, node fill, and stroke to variables. Do not leave raw solid colors on editable output.",
+    "Bind every final solid text fill, node fill, and stroke to variables. Match variables by semantic role and resolved hex value from variables.colorVariablesByHex; do not bind a surface/card fill to a page-background variable just because the name looks close.",
     "Use real image fills only for webpage image assets, never for whole-page screenshots.",
     "Run figma-editable-output-audit.js after writing modules."
   ]
