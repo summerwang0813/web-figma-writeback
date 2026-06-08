@@ -54,6 +54,8 @@ Recommended file names:
 2. Import matching components for buttons, inputs, selectors, tabs, badges, order cards, navigation, icons, and common ecommerce controls.
 3. Use library text styles and color variables when available.
    - Every final text node must have a `textStyleId`.
+   - Every solid text fill must be bound to a color variable with `TEXT_FILL` scope. Prefer semantic text variables over primitive colors.
+   - Reuse variables such as `text/title`, `text/default`, `text/body`, `text/muted`, `text/white`, `action/primary`, and state colors when they exist.
    - Match text semantically first: brand/logo, display title, section title, inline/card title, body, caption, field label, badge/status, link, price, gallery arrow, and button label.
    - If no existing Text Style matches, create the missing `04 Typography/...` or semantic `Web / ...` style with a trailing `*`, then bind the text node to that style.
    - Existing component-library Text Styles keep their original names; only newly created Text Styles get the `*` marker.
@@ -70,7 +72,7 @@ Use `STROKE_COLOR`, not the older `STROKE` scope.
 
 The plugin must rebuild UI as editable Figma structure:
 
-- Text from the webpage becomes Figma text nodes using reusable text styles. Raw CSS font values are allowed only for matching and style creation; final output must reference Text Styles.
+- Text from the webpage becomes Figma text nodes using reusable text styles and bound text-fill variables. Raw CSS font values and raw solid colors are allowed only for matching and variable/style creation; final output must reference Text Styles and color variables.
 - Buttons, selectors, inputs, tabs, cards, badges, modals, order rows, and navigation use library components when available; otherwise create editable fallback components before using them.
 - Icons use the library icon component or the webpage SVG/vector source.
 - Real webpage images use image fills with uploaded `imageHash` values.

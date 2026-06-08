@@ -9,6 +9,7 @@ const CONFIG = {
   minLargeImageHeight: 600,
   minEditableTextNodesPerPage: 3,
   requireTextStyleBinding: true,
+  requireTextFillVariableBinding: true,
   screenshotNamePattern: /screenshot|full.?page|reference|截图|整页|页面截图/i,
   assetPageNamePattern: /asset|component|library|组件|素材|page 1/i
 };
@@ -19,6 +20,13 @@ function hasImageFill(node) {
 
 function hasSolidOrGradientFill(node) {
   return Array.isArray(node.fills) && node.fills.some((fill) => fill.type !== "IMAGE");
+}
+
+function hasUnboundSolidTextFill(node) {
+  if (node.type !== "TEXT" || !Array.isArray(node.fills)) return false;
+  return node.fills.some((fill) =>
+    fill.type === "SOLID" && !fill.boundVariables?.color
+  );
 }
 
 function isLargeImageNode(node) {
@@ -43,7 +51,8 @@ function countEditableNodes(root) {
     shapes: 0,
     largeImages: 0,
     imageOnlyLargeNodes: 0,
-    textWithoutStyle: 0
+    textWithoutStyle: 0,
+    textWithoutFillVariable: 0
   };
 
   walk(root, (node) => {
@@ -51,6 +60,9 @@ function countEditableNodes(root) {
       counts.text += 1;
       if (CONFIG.requireTextStyleBinding && typeof node.textStyleId !== "string") {
         counts.textWithoutStyle += 1;
+      }
+      if (CONFIG.requireTextFillVariableBinding && hasUnboundSolidTextFill(node)) {
+        counts.textWithoutFillVariable += 1;
       }
     }
     if (node.type === "FRAME" || node.type === "GROUP" || node.type === "SECTION") counts.frames += 1;
@@ -74,6 +86,7 @@ function auditPage(page) {
   const violations = [];
   const largeImageNodes = [];
   const textWithoutStyleNodes = [];
+  const textWithoutFillVariableNodes = [];
 
   walk(page, (node) => {
     if (CONFIG.requireTextStyleBinding && node.type === "TEXT" && typeof node.textStyleId !== "string") {
@@ -88,6 +101,21 @@ function auditPage(page) {
         name: node.name,
         issue: "text-node-without-text-style",
         detail: "Final editable text must bind to an existing Text Style via textStyleId. Use the component library Text Style first; create a missing 04 Typography style only when no match exists."
+      });
+    }
+
+    if (CONFIG.requireTextFillVariableBinding && node.type === "TEXT" && hasUnboundSolidTextFill(node)) {
+      textWithoutFillVariableNodes.push({
+        id: node.id,
+        name: node.name,
+        text: node.characters.slice(0, 80)
+      });
+      violations.push({
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        issue: "text-node-without-fill-variable",
+        detail: "Final editable text fills must bind to color variables via paint.boundVariables.color. Use semantic TEXT_FILL variables such as text/title, text/body, text/muted, text/white, action/primary, and state colors."
       });
     }
 
@@ -142,6 +170,7 @@ function auditPage(page) {
     counts,
     largeImageNodes,
     textWithoutStyleNodes: textWithoutStyleNodes.slice(0, 40),
+    textWithoutFillVariableNodes: textWithoutFillVariableNodes.slice(0, 40),
     violations
   };
 }
@@ -162,5 +191,5 @@ return {
   violationCount: violations.length,
   violations,
   pages: pagesReport,
-  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles, and use screenshots only as references."
+  rule: "Full-page screenshots and large screenshot component instances are not acceptable final writeback output. Rebuild as editable semantic Figma nodes, bind final text nodes to Text Styles and color variables, and use screenshots only as references."
 };

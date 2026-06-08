@@ -77,6 +77,7 @@ If the webpage uses an exact typography value that does not exist in the target 
    - Import matching component instances from the component library when available.
    - If no component library exists, create the fallback `01 Base / 02 Semantic / 03 Spacing / 04 Typography` system first.
    - Bind fills, strokes, and text colors to existing variables.
+   - Text fills must bind to `TEXT_FILL` color variables such as semantic `text/title`, `text/default`, `text/body`, `text/muted`, `text/white`, `action/primary`, and state colors. A raw solid color on a final text layer is not complete.
    - Bind typography to text styles; do not leave repeated font settings as one-off layer properties.
    - Resolve each captured text block to a semantic Text Style before writing: brand mark, H1/H2, section title, card title, body, caption, label, badge/status, link, price, gallery arrow, and button label.
    - Create missing variables in the correct fallback layer only when the library lacks the required value.
@@ -123,6 +124,7 @@ If the webpage uses an exact typography value that does not exist in the target 
 - Do not write a page into a file with no design-system foundation; create `01 Base`, `02 Semantic`, `03 Spacing`, and `04 Typography` first.
 - Do not hardcode typography on repeated text nodes; create callable text styles and apply them.
 - Do not leave final `TEXT` nodes without `textStyleId`. If the component library has a matching Text Style, bind it; if not, create the missing `04 Typography/...` style and bind it before completion.
+- Do not leave final text fills as raw solid colors. Every solid text fill must be bound to an existing color variable; create a missing semantic text color variable only when the file lacks a match.
 - Do not create unmarked new typography. Any newly created Text Style must end with `*`; existing component-library Text Styles keep their original names.
 - Do not treat the current website's product/project name as the skill name; this skill applies to any generated website.
 - Do not add states the source does not have, such as making static detail rows look selected.
